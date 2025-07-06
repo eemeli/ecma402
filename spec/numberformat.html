@@ -474,8 +474,8 @@
       <emu-alg>
         1. Let _nf_ be the *this* value.
         1. Perform ? RequireInternalSlot(_nf_, [[InitializedNumberFormat]]).
-        1. Let _x_ be ? ToIntlMathematicalValue(_value_).
-        1. Return FormatNumericToParts(_nf_, _x_).
+        1. Let _intlMV_ be ? ToIntlMathematicalValue(_value_).
+        1. Return FormatNumericToParts(_nf_, _intlMV_).
       </emu-alg>
     </emu-clause>
 
@@ -658,8 +658,8 @@
         1. Let _nf_ be _F_.[[NumberFormat]].
         1. Assert: _nf_ is an Object and _nf_ has an [[InitializedNumberFormat]] internal slot.
         1. If _value_ is not provided, let _value_ be *undefined*.
-        1. Let _x_ be ? ToIntlMathematicalValue(_value_).
-        1. Return FormatNumeric(_nf_, _x_).
+        1. Let _intlMV_ be ? ToIntlMathematicalValue(_value_).
+        1. Return FormatNumeric(_nf_, _intlMV_).
       </emu-alg>
 
       <p>The *"length"* property of a Number format function is *1*<sub>𝔽</sub>.</p>
@@ -722,7 +722,7 @@
       <h1>
         PartitionNumberPattern (
           _numberFormat_: an object initialized as a NumberFormat,
-          _intlMV_: an Intl mathematical value,
+          _x_: a mathematical value or an Intl mathematical value,
         ): a List of Records with fields [[Type]] (a String) and [[Value]] (a String)
       </h1>
       <dl class="header">
@@ -731,8 +731,12 @@
       </dl>
 
       <emu-alg>
-        1. Let _x_ be _intlMV_.[[Value]].
-        1. Let _fractionDigits_ be _intlMV_.[[FractionDigits]].
+        1. If _x_ is an Intl mathematical value, then
+          1. Let _fractionDigits_ be _x_.[[FractionDigits]].
+          1. Set _x_ to _x_.[[Value]].
+        1. Else,
+          1. Assert: _x_ is a mathematical value.
+          1. Let _fractionDigits_ be 0.
         1. Let _exponent_ be 0.
         1. If _x_ is ~not-a-number~, then
           1. Let _n_ be an ILD String value indicating the *NaN* value.
@@ -747,12 +751,10 @@
             1. Set _exponent_ to ComputeExponent(_numberFormat_, _x_).
             1. Set _x_ to _x_ × 10<sup>-_exponent_</sup>.
             1. Set _fractionDigits_ to _fractionDigits_ + _exponent_.
-            1. Set _intlMV_ to the Record { [[Value]]: _x_, [[FractionDigits]]: _fractionDigits_ }
           1. Let _formatNumberResult_ be FormatNumericToString(_numberFormat_, _x_, _fractionDigits_).
           1. Let _n_ be _formatNumberResult_.[[FormattedString]].
           1. Set _x_ to _formatNumberResult_.[[RoundedNumber]].
-          1. Set _intlMV_ to the Record { [[Value]]: _x_, [[FractionDigits]]: _fractionDigits_ }
-        1. Let _pattern_ be GetNumberFormatPattern(_numberFormat_, _intlMV_).
+        1. Let _pattern_ be GetNumberFormatPattern(_numberFormat_, _x_).
         1. Let _result_ be a new empty List.
         1. Let _patternParts_ be PartitionPattern(_pattern_).
         1. For each Record { [[Type]], [[Value]] } _patternPart_ of _patternParts_, do
@@ -760,8 +762,13 @@
           1. If _p_ is *"literal"*, then
             1. Append the Record { [[Type]]: *"literal"*, [[Value]]: _patternPart_.[[Value]] } to _result_.
           1. Else if _p_ is *"number"*, then
-            1. Let _notationSubParts_ be PartitionNotationSubPattern(_numberFormat_, _intlMV_, _n_, _exponent_).
-            1. Set _result_ to the list-concatenation of _result_ and _notationSubParts_.
+            1. If _x_ is ~not-a-number~, then
+              1. Append the Record { [[Type]]: *"nan"*, [[Value]]: _n_ } to _result_.
+            1. Else if _x_ is ~positive-infinity~ or ~negative-infinity~, then
+              1. Append the Record { [[Type]]: *"infinity"*, [[Value]]: _n_ } to _result_.
+            1. Else,
+              1. Let _notationSubParts_ be PartitionNotationSubPattern(_numberFormat_, _x_, _n_, _exponent_).
+              1. Set _result_ to the list-concatenation of _result_ and _notationSubParts_.
           1. Else if _p_ is *"plusSign"*, then
             1. Let _plusSignSymbol_ be the ILND String representing the plus sign.
             1. Append the Record { [[Type]]: *"plusSign"*, [[Value]]: _plusSignSymbol_ } to _result_.
@@ -806,7 +813,7 @@
       <h1>
         PartitionNotationSubPattern (
           _numberFormat_: an Intl.NumberFormat,
-          _x_: an Intl mathematical value,
+          _x_: a mathematical value or ~negative-zero~.
           _n_: a String,
           _exponent_: an integer,
         ): a List of Records with fields [[Type]] (a String) and [[Value]] (a String)
@@ -814,82 +821,77 @@
       <dl class="header">
         <dt>description</dt>
         <dd>
-          _x_ is an Intl mathematical value after rounding is applied and _n_ is an intermediate formatted string.
+          _x_ is a mathematical value after rounding is applied and _n_ is an intermediate formatted string.
           It creates the corresponding parts for the number and notation according to the effective locale and the formatting options of _numberFormat_.
         </dd>
       </dl>
       <emu-alg>
         1. Let _result_ be a new empty List.
-        1. If _x_.[[Value]] is ~not-a-number~, then
-          1. Append the Record { [[Type]]: *"nan"*, [[Value]]: _n_ } to _result_.
-        1. Else if _x_.[[Value]] is ~positive-infinity~ or ~negative-infinity~, then
-          1. Append the Record { [[Type]]: *"infinity"*, [[Value]]: _n_ } to _result_.
-        1. Else,
-          1. Let _notationSubPattern_ be GetNotationSubPattern(_numberFormat_, _exponent_).
-          1. Let _patternParts_ be PartitionPattern(_notationSubPattern_).
-          1. For each Record { [[Type]], [[Value]] } _patternPart_ of _patternParts_, do
-            1. Let _p_ be _patternPart_.[[Type]].
-            1. If _p_ is *"literal"*, then
-              1. Append the Record { [[Type]]: *"literal"*, [[Value]]: _patternPart_.[[Value]] } to _result_.
-            1. Else if _p_ is *"number"*, then
-              1. If the _numberFormat_.[[NumberingSystem]] matches one of the values in the Numbering System column of <emu-xref href="#table-numbering-system-digits"></emu-xref> below, then
-                1. Let _digits_ be a List whose elements are the code points specified in the Digits column of the matching row in <emu-xref href="#table-numbering-system-digits"></emu-xref>.
-                1. Assert: The length of _digits_ is 10.
-                1. Let _transliterated_ be the empty String.
-                1. Let _len_ be the length of _n_.
-                1. Let _position_ be 0.
-                1. Repeat, while _position_ &lt; _len_,
-                  1. Let _c_ be the code unit at index _position_ within _n_.
-                  1. If 0x0030 ≤ _c_ ≤ 0x0039, then
-                    1. NOTE: _c_ is an ASCII digit.
-                    1. Let _i_ be _c_ - 0x0030.
-                    1. Set _c_ to CodePointsToString(« _digits_[_i_] »).
-                  1. Set _transliterated_ to the string-concatenation of _transliterated_ and _c_.
-                  1. Set _position_ to _position_ + 1.
-                1. Set _n_ to _transliterated_.
-              1. Else,
-                1. Use an implementation dependent algorithm to map _n_ to the appropriate representation of _n_ in the given numbering system.
-              1. Let _decimalSepIndex_ be StringIndexOf(_n_, *"."*, 0).
-              1. If _decimalSepIndex_ is not ~not-found~ and _decimalSepIndex_ > 0, then
-                1. Let _integer_ be the substring of _n_ from 0 to _decimalSepIndex_.
-                1. Let _fraction_ be the substring of _n_ from _decimalSepIndex_ + 1.
-              1. Else,
-                1. Let _integer_ be _n_.
-                1. Let _fraction_ be *undefined*.
-              1. If the _numberFormat_.[[UseGrouping]] is *false*, then
-                1. Append the Record { [[Type]]: *"integer"*, [[Value]]: _integer_ } to _result_.
-              1. Else,
-                1. Let _groupSepSymbol_ be the ILND String representing the grouping separator.
-                1. Let _groups_ be a List whose elements are, in left to right order, the substrings defined by ILND set of locations within the _integer_, which may depend on the value of _numberFormat_.[[UseGrouping]].
-                1. Assert: The number of elements in _groups_ List is greater than 0.
-                1. Repeat, while _groups_ List is not empty,
-                  1. Remove the first element from _groups_ and let _integerGroup_ be the value of that element.
-                  1. Append the Record { [[Type]]: *"integer"*, [[Value]]: _integerGroup_ } to _result_.
-                  1. If _groups_ List is not empty, then
-                    1. Append the Record { [[Type]]: *"group"*, [[Value]]: _groupSepSymbol_ } to _result_.
-              1. If _fraction_ is not *undefined*, then
-                1. Let _decimalSepSymbol_ be the ILND String representing the decimal separator.
-                1. Append the Record { [[Type]]: *"decimal"*, [[Value]]: _decimalSepSymbol_ } to _result_.
-                1. Append the Record { [[Type]]: *"fraction"*, [[Value]]: _fraction_ } to _result_.
-            1. Else if _p_ is *"compactSymbol"*, then
-              1. Let _compactSymbol_ be an ILD string representing _exponent_ in short form, which may depend on _x_.[[Value]] in languages having different plural forms. The implementation must be able to provide this string, or else the pattern would not have a *"{compactSymbol}"* placeholder.
-              1. Append the Record { [[Type]]: *"compact"*, [[Value]]: _compactSymbol_ } to _result_.
-            1. Else if _p_ is *"compactName"*, then
-              1. Let _compactName_ be an ILD string representing _exponent_ in long form, which may depend on _x_.[[Value]] in languages having different plural forms. The implementation must be able to provide this string, or else the pattern would not have a *"{compactName}"* placeholder.
-              1. Append the Record { [[Type]]: *"compact"*, [[Value]]: _compactName_ } to _result_.
-            1. Else if _p_ is *"scientificSeparator"*, then
-              1. Let _scientificSeparator_ be the ILND String representing the exponent separator.
-              1. Append the Record { [[Type]]: *"exponentSeparator"*, [[Value]]: _scientificSeparator_ } to _result_.
-            1. Else if _p_ is *"scientificExponent"*, then
-              1. If _exponent_ &lt; 0, then
-                1. Let _minusSignSymbol_ be the ILND String representing the minus sign.
-                1. Append the Record { [[Type]]: *"exponentMinusSign"*, [[Value]]: _minusSignSymbol_ } to _result_.
-                1. Let _exponent_ be -_exponent_.
-              1. Let _exponentResult_ be ToRawFixed(_exponent_, 0, 0, 0, 1, *undefined*).
-              1. Append the Record { [[Type]]: *"exponentInteger"*, [[Value]]: _exponentResult_.[[FormattedString]] } to _result_.
+        1. Let _notationSubPattern_ be GetNotationSubPattern(_numberFormat_, _exponent_).
+        1. Let _patternParts_ be PartitionPattern(_notationSubPattern_).
+        1. For each Record { [[Type]], [[Value]] } _patternPart_ of _patternParts_, do
+          1. Let _p_ be _patternPart_.[[Type]].
+          1. If _p_ is *"literal"*, then
+            1. Append the Record { [[Type]]: *"literal"*, [[Value]]: _patternPart_.[[Value]] } to _result_.
+          1. Else if _p_ is *"number"*, then
+            1. If the _numberFormat_.[[NumberingSystem]] matches one of the values in the Numbering System column of <emu-xref href="#table-numbering-system-digits"></emu-xref> below, then
+              1. Let _digits_ be a List whose elements are the code points specified in the Digits column of the matching row in <emu-xref href="#table-numbering-system-digits"></emu-xref>.
+              1. Assert: The length of _digits_ is 10.
+              1. Let _transliterated_ be the empty String.
+              1. Let _len_ be the length of _n_.
+              1. Let _position_ be 0.
+              1. Repeat, while _position_ &lt; _len_,
+                1. Let _c_ be the code unit at index _position_ within _n_.
+                1. If 0x0030 ≤ _c_ ≤ 0x0039, then
+                  1. NOTE: _c_ is an ASCII digit.
+                  1. Let _i_ be _c_ - 0x0030.
+                  1. Set _c_ to CodePointsToString(« _digits_[_i_] »).
+                1. Set _transliterated_ to the string-concatenation of _transliterated_ and _c_.
+                1. Set _position_ to _position_ + 1.
+              1. Set _n_ to _transliterated_.
             1. Else,
-              1. Let _unknown_ be an ILND String based on _x_ and _p_.
-              1. Append the Record { [[Type]]: *"unknown"*, [[Value]]: _unknown_ } to _result_.
+              1. Use an implementation dependent algorithm to map _n_ to the appropriate representation of _n_ in the given numbering system.
+            1. Let _decimalSepIndex_ be StringIndexOf(_n_, *"."*, 0).
+            1. If _decimalSepIndex_ is not ~not-found~ and _decimalSepIndex_ > 0, then
+              1. Let _integer_ be the substring of _n_ from 0 to _decimalSepIndex_.
+              1. Let _fraction_ be the substring of _n_ from _decimalSepIndex_ + 1.
+            1. Else,
+              1. Let _integer_ be _n_.
+              1. Let _fraction_ be *undefined*.
+            1. If the _numberFormat_.[[UseGrouping]] is *false*, then
+              1. Append the Record { [[Type]]: *"integer"*, [[Value]]: _integer_ } to _result_.
+            1. Else,
+              1. Let _groupSepSymbol_ be the ILND String representing the grouping separator.
+              1. Let _groups_ be a List whose elements are, in left to right order, the substrings defined by ILND set of locations within the _integer_, which may depend on the value of _numberFormat_.[[UseGrouping]].
+              1. Assert: The number of elements in _groups_ List is greater than 0.
+              1. Repeat, while _groups_ List is not empty,
+                1. Remove the first element from _groups_ and let _integerGroup_ be the value of that element.
+                1. Append the Record { [[Type]]: *"integer"*, [[Value]]: _integerGroup_ } to _result_.
+                1. If _groups_ List is not empty, then
+                  1. Append the Record { [[Type]]: *"group"*, [[Value]]: _groupSepSymbol_ } to _result_.
+            1. If _fraction_ is not *undefined*, then
+              1. Let _decimalSepSymbol_ be the ILND String representing the decimal separator.
+              1. Append the Record { [[Type]]: *"decimal"*, [[Value]]: _decimalSepSymbol_ } to _result_.
+              1. Append the Record { [[Type]]: *"fraction"*, [[Value]]: _fraction_ } to _result_.
+          1. Else if _p_ is *"compactSymbol"*, then
+            1. Let _compactSymbol_ be an ILD string representing _exponent_ in short form, which may depend on _x_ in languages having different plural forms. The implementation must be able to provide this string, or else the pattern would not have a *"{compactSymbol}"* placeholder.
+            1. Append the Record { [[Type]]: *"compact"*, [[Value]]: _compactSymbol_ } to _result_.
+          1. Else if _p_ is *"compactName"*, then
+            1. Let _compactName_ be an ILD string representing _exponent_ in long form, which may depend on _x_ in languages having different plural forms. The implementation must be able to provide this string, or else the pattern would not have a *"{compactName}"* placeholder.
+            1. Append the Record { [[Type]]: *"compact"*, [[Value]]: _compactName_ } to _result_.
+          1. Else if _p_ is *"scientificSeparator"*, then
+            1. Let _scientificSeparator_ be the ILND String representing the exponent separator.
+            1. Append the Record { [[Type]]: *"exponentSeparator"*, [[Value]]: _scientificSeparator_ } to _result_.
+          1. Else if _p_ is *"scientificExponent"*, then
+            1. If _exponent_ &lt; 0, then
+              1. Let _minusSignSymbol_ be the ILND String representing the minus sign.
+              1. Append the Record { [[Type]]: *"exponentMinusSign"*, [[Value]]: _minusSignSymbol_ } to _result_.
+              1. Let _exponent_ be -_exponent_.
+            1. Let _exponentResult_ be ToRawFixed(_exponent_, 0, 0, 0, 1, *undefined*).
+            1. Append the Record { [[Type]]: *"exponentInteger"*, [[Value]]: _exponentResult_.[[FormattedString]] } to _result_.
+          1. Else,
+            1. Let _unknown_ be an ILND String based on _x_ and _p_.
+            1. Append the Record { [[Type]]: *"unknown"*, [[Value]]: _unknown_ } to _result_.
         1. Return _result_.
       </emu-alg>
 
@@ -1226,7 +1228,7 @@
       <h1>
         FormatNumeric (
           _numberFormat_: an Intl.NumberFormat,
-          _x_: an Intl mathematical value,
+          _x_: a mathematical value or an Intl mathematical value,
         ): a String
       </h1>
       <dl class="header">
@@ -1244,13 +1246,13 @@
       <h1>
         FormatNumericToParts (
           _numberFormat_: an Intl.NumberFormat,
-          _x_: an Intl mathematical value,
+          _intlMV_: an Intl mathematical value,
         ): an Array
       </h1>
       <dl class="header">
       </dl>
       <emu-alg>
-        1. Let _parts_ be PartitionNumberPattern(_numberFormat_, _x_).
+        1. Let _parts_ be PartitionNumberPattern(_numberFormat_, _intlMV_).
         1. Let _result_ be ! ArrayCreate(0).
         1. Let _n_ be 0.
         1. For each Record { [[Type]], [[Value]] } _part_ of _parts_, do
@@ -1394,13 +1396,13 @@
       <h1>
         GetNumberFormatPattern (
           _numberFormat_: an Intl.NumberFormat,
-          _x_: an Intl mathematical value,
+          _x_: a mathematical value or ~positive-infinity~ or ~negative-infinity~ or ~not-a-number~ or ~negative-zero~.
         ): a String
       </h1>
       <dl class="header">
         <dt>description</dt>
         <dd>
-          It considers the resolved unit-related options in the number format object along with the final scaled and rounded number being formatted (an Intl mathematical value) and returns a pattern, a String value as described in <emu-xref href="#sec-intl.numberformat-internal-slots"></emu-xref>.
+          It considers the resolved unit-related options in the number format object along with the final scaled and rounded number being formatted and returns a pattern, a String value as described in <emu-xref href="#sec-intl.numberformat-internal-slots"></emu-xref>.
         </dd>
       </dl>
       <emu-alg>
@@ -1431,19 +1433,19 @@
         1. Else,
           1. Assert: _style_ is *"decimal"*.
           1. Set _patterns_ to _patterns_.[[decimal]].
-        1. If _x_.[[Value]] is ~negative-infinity~, then
+        1. If _x_ is ~negative-infinity~, then
           1. Let _category_ be ~negative-non-zero~.
-        1. Else if _x_.[[Value]] is ~negative-zero~, then
+        1. Else if _x_ is ~negative-zero~, then
           1. Let _category_ be ~negative-zero~.
-        1. Else if _x_.[[Value]] is ~not-a-number~, then
+        1. Else if _x_ is ~not-a-number~, then
           1. Let _category_ be ~positive-zero~.
-        1. Else if _x_.[[Value]] is ~positive-infinity~, then
+        1. Else if _x_ is ~positive-infinity~, then
           1. Let _category_ be ~positive-non-zero~.
         1. Else,
-          1. Assert: _x_.[[Value]] is a mathematical value.
-          1. If _x_.[[Value]] &lt; 0, then
+          1. Assert: _x_ is a mathematical value.
+          1. If _x_ &lt; 0, then
             1. Let _category_ be ~negative-non-zero~.
-          1. Else if _x_.[[Value]] > 0, then
+          1. Else if _x_ > 0, then
             1. Let _category_ be ~positive-non-zero~.
           1. Else,
             1. Let _category_ be ~positive-zero~.
