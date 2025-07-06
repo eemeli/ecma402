@@ -278,14 +278,14 @@
       </dl>
       <emu-alg>
         1. Let _x_ be _intlMV_.[[Value]].
-        1. Let _fractionDigits_ be _intlMV_.[[FractionDigits]].
+        1. Let _stringDigits_ be _intlMV_.[[StringDigits]].
         1. If _x_ is ~not-a-number~, then
           1. Return the Record { [[PluralCategory]]: *"other"*, [[FormattedString]]: *"NaN"* }.
         1. Else if _x_ is ~positive-infinity~, then
           1. Return the Record { [[PluralCategory]]: *"other"*, [[FormattedString]]: *"Infinity"* }.
         1. Else if _x_ is ~negative-infinity~, then
           1. Return the Record { [[PluralCategory]]: *"other"*, [[FormattedString]]: *"-Infinity"* }.
-        1. Let _res_ be FormatNumericToString(_pluralRules_, _x_, _fractionDigits_).
+        1. Let _res_ be FormatNumericToString(_pluralRules_, _x_, _stringDigits_).
         1. Let _s_ be _res_.[[FormattedString]].
         1. Let _locale_ be _pluralRules_.[[Locale]].
         1. Let _type_ be _pluralRules_.[[Type]].
