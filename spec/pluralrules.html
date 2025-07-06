@@ -274,15 +274,18 @@
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>The returned Record contains two string-valued fields describing _n_ according to the effective locale and the options of _pluralRules_: [[PluralCategory]] characterizing its <emu-xref href="#sec-pluralruleselect">plural category</emu-xref>, and [[FormattedString]] containing its formatted representation.</dd>
+        <dd>The returned Record contains two string-valued fields describing _intlMV_ according to the effective locale and the options of _pluralRules_: [[PluralCategory]] characterizing its <emu-xref href="#sec-pluralruleselect">plural category</emu-xref>, and [[FormattedString]] containing its formatted representation.</dd>
       </dl>
       <emu-alg>
         1. Let _x_ be _intlMV_.[[Value]].
         1. Let _fractionDigits_ be _intlMV_.[[FractionDigits]].
-        1. If _x_ is ~not-a-number~ or ~positive-infinity~ or ~negative-infinity~, then
-          1. Let _s_ be ! ToString(_n_).
-          1. Return the Record { [[PluralCategory]]: *"other"*, [[FormattedString]]: _s_ }.
-        1. Let _res_ be FormatNumericToString(_pluralRules_, _n_, _fractionDigits_).
+        1. If _x_ is ~not-a-number~, then
+          1. Return the Record { [[PluralCategory]]: *"other"*, [[FormattedString]]: *"NaN"* }.
+        1. Else if _x_ is ~positive-infinity~, then
+          1. Return the Record { [[PluralCategory]]: *"other"*, [[FormattedString]]: *"Infinity"* }.
+        1. Else if _x_ is ~negative-infinity~, then
+          1. Return the Record { [[PluralCategory]]: *"other"*, [[FormattedString]]: *"-Infinity"* }.
+        1. Let _res_ be FormatNumericToString(_pluralRules_, _x_, _fractionDigits_).
         1. Let _s_ be _res_.[[FormattedString]].
         1. Let _locale_ be _pluralRules_.[[Locale]].
         1. Let _type_ be _pluralRules_.[[Type]].
