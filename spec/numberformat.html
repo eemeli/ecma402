@@ -490,8 +490,8 @@
       <emu-alg>
         1. Let _nf_ be the *this* value.
         1. Perform ? RequireInternalSlot(_nf_, [[InitializedNumberFormat]]).
-        1. Let _intlMV_ be ? ToIntlMathematicalValue(_value_).
-        1. Return FormatNumericToParts(_nf_, _intlMV_).
+        1. Let _x_ be ? ToIntlMathematicalValue(_value_).
+        1. Return FormatNumericToParts(_nf_, _x_).
       </emu-alg>
     </emu-clause>
 
@@ -674,8 +674,8 @@
         1. Let _nf_ be _F_.[[NumberFormat]].
         1. Assert: _nf_ is an Object and _nf_ has an [[InitializedNumberFormat]] internal slot.
         1. If _value_ is not provided, let _value_ be *undefined*.
-        1. Let _intlMV_ be ? ToIntlMathematicalValue(_value_).
-        1. Return FormatNumeric(_nf_, _intlMV_).
+        1. Let _x_ be ? ToIntlMathematicalValue(_value_).
+        1. Return FormatNumeric(_nf_, _x_).
       </emu-alg>
 
       <p>The *"length"* property of a Number format function is *1*<sub>𝔽</sub>.</p>
@@ -1409,7 +1409,7 @@
       <h1>
         GetNumberFormatPattern (
           _numberFormat_: an Intl.NumberFormat,
-          _x_: a mathematical value or ~positive-infinity~ or ~negative-infinity~ or ~not-a-number~ or ~negative-zero~.
+          _x_: either a mathematical value or one of ~positive-infinity~, ~negative-infinity~, ~not-a-number~, or ~negative-zero~,
         ): a String
       </h1>
       <dl class="header">
